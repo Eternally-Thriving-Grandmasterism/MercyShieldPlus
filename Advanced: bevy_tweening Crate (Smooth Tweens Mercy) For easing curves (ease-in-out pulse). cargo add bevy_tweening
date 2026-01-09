@@ -1,0 +1,20 @@
+use bevy_tweening::{Tween, EaseFunction, lens::TransformScaleLens, TweeningPlugin};
+
+App::new()
+    .add_plugins((DefaultPlugins, TweeningPlugin))
+    // ...
+
+let tween = Tween::new(
+    EaseFunction::QuadraticInOut,
+    std::time::Duration::from_secs(1),
+    TransformScaleLens {
+        start: Vec3::splat(1.0),
+        end: Vec3::splat(1.5),
+    },
+).with_repeat_count(RepeatCount::Infinite)
+   .with_repeat_strategy(RepeatStrategy::Mirrored);
+
+commands.spawn((
+    SpriteBundle { .. },
+    Animator::new(tween),
+));
