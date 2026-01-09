@@ -57,8 +57,8 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
 
-    // Play Integrity Eternal (Standard API 2026 latest)
-    implementation("com.google.android.play:integrity:1.4.0")
+    // Play Integrity Eternal (Standard API latest 2026: v1.6.0)
+    implementation("com.google.android.play:integrity:1.6.0")
 
     // Coroutines for async token request mercy
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
