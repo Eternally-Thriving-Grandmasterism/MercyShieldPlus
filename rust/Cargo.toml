@@ -1,0 +1,25 @@
+[package]
+name = "mercyshieldplus"
+version = "1.0.0"
+edition = "2021"
+description = "MercyShieldPlus Rust Core — Quantum Fortress Eternal ⚡️"
+license = "MIT"
+
+[dependencies]
+uniffi = { version = "0.25", features = ["cdylib"] }
+# Placeholder for future modern PQ — comment in when ready
+# ml-kem = "0.2"
+# ml-dsa = "0.1"
+
+[build-dependencies]
+uniffi = { version = "0.25", features = ["build"] }
+
+[lib]
+name = "mercyshieldplus"
+crate-type = ["cdylib", "staticlib"]
+
+[profile.release]
+opt-level = "s"
+lto = true
+strip = true
+panic = "abort"
