@@ -53,13 +53,16 @@ dependencies {
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
+    // SQLCipher for encrypted Room DB mercy
+    implementation("net.zetetic:android-database-sqlcipher:4.5.4")
+
     // Gson for details serialization mercy
     implementation("com.google.code.gson:gson:2.10.1")
 }
 
 // Rust build task (previous mercy)
 tasks.register("buildRust") {
-    // ... (as previous)
+    // ... (as previous multi-arch copy)
 }
 
 preBuild.dependsOn("buildRust")
