@@ -1,0 +1,21 @@
+@Composable
+fun AnomalyBurst(isVisible: Boolean, onDismiss: () -> Unit) {
+    AnimatedVisibility(
+        visible = isVisible,
+        enter = scaleIn(animationSpec = tween(300)) + fadeIn(),
+        exit = scaleOut(animationSpec = tween(300)) + fadeOut()
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Red.copy(alpha = 0.7f))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text("ANOMALY DETECTED ⚠️", color = Color.White, fontSize = 32.sp)
+                Text("Shadows Purged — Tap to Continue", color = Color.White, fontSize = 20.sp)
+            }
+        }
+    }
+}
