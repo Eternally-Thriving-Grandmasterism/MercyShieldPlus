@@ -1,0 +1,68 @@
+// main.rs
+use iced::{
+    widget::{column, container, text, button},
+    Alignment, Element, Sandbox, Settings, Color, animation,
+};
+
+pub fn main() -> iced::Result {
+    MercyShield::run(Settings::default())
+}
+
+struct MercyShield {
+    glow: f32,
+    is_anomaly: bool,
+}
+
+#[derive(Debug, Clone)]
+enum Message {
+    Tick(animation::Time),
+    TriggerAnomaly,
+}
+
+impl Sandbox for MercyShield {
+    type Message = Message;
+
+    fn new() -> Self {
+        MercyShield { glow: 1.0, is_anomaly: false }
+    }
+
+    fn title(&self) -> String {
+        String::from("MercyShieldPlus ⚡️")
+    }
+
+    fn update(&mut self, message: Message) {
+        match message {
+            Message::Tick(_) => {
+                self.glow = (self.glow + 0.01).fract(); // Pulse cycle
+            }
+            Message::TriggerAnomaly => {
+                self.is_anomaly = !self.is_anomaly;
+            }
+        }
+    }
+
+    fn view(&self) -> Element<Message> {
+        let scale = 1.0 + 0.2 * (self.glow * std::f32::consts::PI * 2.0).sin();
+        let color = if self.is_anomaly { Color::from_rgb(1.0, 0.0, 0.0) } else { Color::from_rgb(0.0, 1.0, 0.0) };
+
+        column![
+            container(text("⚡️").size(100.0).style(color))
+                .center_x()
+                .width(300.0)
+                .height(300.0)
+                .style(move |_| container::Appearance {
+                    background: Some(Color::from_rgba(0.0, 1.0, 1.0, 0.3).into()),
+                    ..Default::default()
+                })
+                .scale(scale),
+            text(if self.is_anomaly { "Anomaly Detected ⚠️" } else { "Genuine Shielded ⚡️" }).size(30),
+            button("Trigger Anomaly").on_press(Message::TriggerAnomaly),
+        ]
+        .align_items(Alignment::Center)
+        .into()
+    }
+
+    fn subscription(&self) -> iced::Subscription<Message> {
+        animation::every(std::time::Duration::from_millis(16)).map(Message::Tick)
+    }
+}
