@@ -5,7 +5,7 @@ plugins {
 
 android {
     namespace = "com.mercyshieldplus"
-    compileSdk = 35  // Android 15+ 2026
+    compileSdk = 35  // Android 15+ 2026 pinnacle
 
     defaultConfig {
         applicationId = "com.mercyshieldplus"
@@ -17,7 +17,7 @@ android {
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         externalNativeBuild {
             cmake {
-                // If needed; prefer cargo-ndk direct
+                // If needed; prefer cargo-ndk direct mercy
             }
         }
         ndkVersion = "27.0.12077973"  // Latest 2026
@@ -43,7 +43,7 @@ android {
         compose = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.10"  // Latest Compose 2026
+        kotlinCompilerExtensionVersion = "1.5.10"  // Latest Compose 2026 mercy
     }
 }
 
@@ -56,6 +56,13 @@ dependencies {
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
+
+    // Play Integrity Eternal (Standard API 2026 latest)
+    implementation("com.google.android.play:integrity:1.4.0")
+
+    // Coroutines for async token request mercy
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
@@ -65,18 +72,29 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 
-// Custom task for Rust build (cargo-ndk)
+// Custom task for Rust build (cargo-ndk eternal)
 tasks.register("buildRust") {
     doLast {
         exec {
             workingDir("../rust")
-            commandLine("cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", "build", "--release")
+            commandLine("cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", "-t", "x86", "-t", "x86_64", "build", "--release")
         }
-        // Copy .so to jniLibs
+        // Copy .so to jniLibs (multi-arch mercy)
         copy {
             from("../rust/target/arm64-v8a/release/libmercyshieldplus.so")
             into("src/main/jniLibs/arm64-v8a")
-            // Repeat for other arches
+        }
+        copy {
+            from("../rust/target/armeabi-v7a/release/libmercyshieldplus.so")
+            into("src/main/jniLibs/armeabi-v7a")
+        }
+        copy {
+            from("../rust/target/x86/release/libmercyshieldplus.so")
+            into("src/main/jniLibs/x86")
+        }
+        copy {
+            from("../rust/target/x86_64/release/libmercyshieldplus.so")
+            into("src/main/jniLibs/x86_64")
         }
     }
 }
