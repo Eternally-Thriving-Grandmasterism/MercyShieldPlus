@@ -1,0 +1,4 @@
+val suspiciousFiles = RootDetectionUtil.detectSuspiciousFiles() + 
+                       if (RootDetectionUtil.isMagiskPresent(getApplication())) listOf("Magisk indicators") else emptyList()
+val suspiciousProps = RootDetectionUtil.detectSuspiciousProps()
+val magisk = RootDetectionUtil.isMagiskPresent(getApplication())
