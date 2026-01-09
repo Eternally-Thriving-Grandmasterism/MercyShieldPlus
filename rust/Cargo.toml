@@ -6,10 +6,14 @@ description = "MercyShieldPlus Rust Core — Quantum Fortress Eternal ⚡️"
 license = "MIT"
 
 [dependencies]
-uniffi = { version = "0.25", features = ["cdylib"] }
-# Placeholder for future modern PQ — comment in when ready
-# ml-kem = "0.2"
-# ml-dsa = "0.1"
+ml-kem = "0.2"                  # FIPS 203 ML-KEM pure Rust 2026 stable
+ml-dsa = "0.1"                  # FIPS 204 ML-DSA pure Rust matching ecosystem
+rand_core = { version = "0.6", features = ["getrandom"] }
+getrandom = { version = "0.2", features = ["custom"] }  # Android OsRng mercy
+zeroize = { version = "1.7", features = ["derive"] }    # Secrets auto-zero eternal
+aes-gcm = "0.10"                # Hybrid AEAD from shared secret
+uniffi = { version = "0.25", features = ["cdylib"] }   # Bidirectional Kotlin interop
+base64 = "0.22"                 # PK export mercy
 
 [build-dependencies]
 uniffi = { version = "0.25", features = ["build"] }
