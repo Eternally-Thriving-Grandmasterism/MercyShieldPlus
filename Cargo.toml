@@ -1,29 +1,23 @@
 [package]
 name = "mercyshieldplus"
-version = "1.0.0"
+version = "0.4.0"
 edition = "2021"
-description = "MercyShieldPlus Rust Core — Quantum Fortress Eternal ⚡️"
+description = "Proprietary Foolproof Quantum Fortress Core Eternal ⚡️"
 license = "MIT"
 
+[lib]
+name = "mercyshieldplus"
+crate-type = ["cdylib"]
+
 [dependencies]
-ml-kem = "0.2"                  # FIPS 203 ML-KEM pure Rust
-ml-dsa = "0.1"                  # FIPS 204 ML-DSA pure Rust
-rand_core = { version = "0.6", features = ["getrandom"] }
-getrandom = { version = "0.2", features = ["custom"] }
-zeroize = { version = "1.7", features = ["derive"] }
-aes-gcm = "0.10"
-uniffi = { version = "0.25", features = ["cdylib"] }
-base64 = "0.22"                 # For PK export
+uniffi = { version = "0.25", features = ["bindgen"] }
+pqcrypto-kyber = "0.3"
+pqcrypto-dilithium = "0.3"
+pqcrypto-falcon = "0.3"  # Falcon-512 lighter signatures proprietary base
+pqcrypto-traits = "0.3"
 
 [build-dependencies]
 uniffi = { version = "0.25", features = ["build"] }
 
-[lib]
-name = "mercyshieldplus"
-crate-type = ["cdylib", "staticlib"]
-
-[profile.release]
-opt-level = "s"
-lto = true
-strip = true
-panic = "abort"
+[features]
+default = []
