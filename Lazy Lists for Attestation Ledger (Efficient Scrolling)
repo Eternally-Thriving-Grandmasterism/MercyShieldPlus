@@ -1,0 +1,13 @@
+@Composable
+fun AttestationLedger(attestations: List<Attestation>) {
+    LazyColumn {
+        items(attestations) { attest ->
+            ListItem(
+                headlineText = { Text(attest.timestamp) },
+                supportingText = { Text(attest.status) },
+                leadingContent = { Icon(if (attest.verified) Icons.Filled.CheckCircle else Icons.Filled.Error, "") }
+            )
+            Divider()
+        }
+    }
+}
