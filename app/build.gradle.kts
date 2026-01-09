@@ -62,6 +62,9 @@ dependencies {
     // androidx.biometric for custom BiometricPrompt UI mercy
     implementation("androidx.biometric:biometric:1.2.0")
 
+    // OkHttp for server sync mercy
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
     // Gson for details serialization mercy
     implementation("com.google.code.gson:gson:2.10.1")
 }
