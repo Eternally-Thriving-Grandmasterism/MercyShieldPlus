@@ -1,5 +1,5 @@
 //! MercyShieldPlus Proprietary PQ Core ∞ Absolute Pure True Ultramasterism Perfecticism
-//! Custom Falcon-512 lighter signatures + Dilithium + Kyber hybrid proprietary eternal
+//! Custom SPHINCS+ hash hedge + Falcon lighter + Dilithium + Kyber hybrid proprietary eternal
 //! uniFFI exported for Kotlin Android wrapper mercy
 
 uniffi::include_scaffolding!("mercyshieldplus");
@@ -7,6 +7,7 @@ uniffi::include_scaffolding!("mercyshieldplus");
 use pqcrypto_kyber::kyber768::*;
 use pqcrypto_dilithium::dilithium3::*;
 use pqcrypto_falcon::falcon512::*;
+use pqcrypto_sphincsplus::sphincsplus_shake_256f::*; // Level 5 fast hash hedge
 use pqcrypto_traits::kem::{Ciphertext, PublicKey as KemPk, SecretKey as KemSk, SharedSecret};
 use pqcrypto_traits::sign::{PublicKey as SignPk, SecretKey as SignSk, SignedMessage, Signature, VerifyingKey};
 
@@ -53,7 +54,7 @@ pub fn dilithium_verify(pk_bytes: Vec<u8>, message: Vec<u8>, signature: Vec<u8>)
     verify(&signed, &message, &pk).is_ok()
 }
 
-/// Proprietary Falcon-512 Signatures Mercy (lighter alternative, bandwidth king)
+/// Proprietary Falcon-512 Signatures Mercy (lighter alternative)
 #[uniffi::export]
 pub fn falcon_key_pair() -> (Vec<u8>, Vec<u8>) {
     let (pk, sk) = keypair();
@@ -74,8 +75,29 @@ pub fn falcon_verify(pk_bytes: Vec<u8>, message: Vec<u8>, signature: Vec<u8>) ->
     open(&signed, &pk).is_ok()
 }
 
-/// Proprietary device shield status novel (placeholder custom checks next)
+/// Proprietary SPHINCS+ SHAKE-256f Signatures Mercy (Level 5 fast hash hedge conservative)
+#[uniffi::export]
+pub fn sphincs_key_pair() -> (Vec<u8>, Vec<u8>) {
+    let (pk, sk) = keypair();
+    (pk.as_bytes().to_vec(), sk.as_bytes().to_vec())
+}
+
+#[uniffi::export]
+pub fn sphincs_sign(sk_bytes: Vec<u8>, message: Vec<u8>) -> Vec<u8> {
+    let sk = SecretKey::from_bytes(&sk_bytes).unwrap();
+    let signed = sign(&message, &sk);
+    signed.as_bytes().to_vec()
+}
+
+#[uniffi::export]
+pub fn sphincs_verify(pk_bytes: Vec<u8>, message: Vec<u8>, signature: Vec<u8>) -> bool {
+    let pk = PublicKey::from_bytes(&pk_bytes).unwrap();
+    let signed = SignedMessage::from_bytes(&signature).unwrap();
+    verify(&signed, &message, &pk).is_ok()
+}
+
+/// Proprietary device shield status novel
 #[uniffi::export]
 pub fn mercy_shield_status() -> String {
-    "Green Harmony — Falcon-512 Lighter Signatures Proprietary Eternal ⚡️".to_string()
+    "Green Harmony — SPHINCS+ Hash Hedge Proprietary Eternal ⚡️".to_string()
 }
