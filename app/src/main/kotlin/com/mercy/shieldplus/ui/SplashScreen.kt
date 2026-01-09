@@ -1,7 +1,6 @@
 package com.mercyshieldplus.ui
 
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
 import androidx.biometric.BiometricManager
 import androidx.biometric.BiometricPrompt
 import androidx.compose.animation.core.*
@@ -21,12 +20,14 @@ import com.mercyshieldplus.MainActivity
 import java.util.concurrent.Executor
 
 /**
- * Custom BiometricPrompt UI Mercy — Branded splash with quantum pulse animation
- * System BiometricPrompt dialog with custom strings overlaid on custom background
+ * Custom BiometricPrompt with Explicit Device Credential Fallback Mercy
  *
- * Triggers on app start — on success proceed to main UI, on failure mercy message
+ * - Preferred: BIOMETRIC_STRONG (fingerprint/face/iris)
+ * - Fallback: DEVICE_CREDENTIAL (PIN/pattern/password) always allowed
+ * - If no biometric enrolled/available: Prompt directly uses device credential
+ * - Custom branded splash animation runs during auth
  */
-fun ComponentActivity.showCustomBiometricPrompt(onSuccess: () -> Unit, onFailure: () -> Unit) {
+fun ComponentActivity.showBiometricPromptWithFallback(onSuccess: () -> Unit, onFailure: () -> Unit) {
     val executor: Executor = ContextCompat.getMainExecutor(this)
 
     val biometricPrompt = BiometricPrompt(this, executor, object : BiometricPrompt.AuthenticationCallback() {
@@ -42,25 +43,46 @@ fun ComponentActivity.showCustomBiometricPrompt(onSuccess: () -> Unit, onFailure
 
         override fun onAuthenticationFailed() {
             super.onAuthenticationFailed()
-            onFailure()
+            // Partial failure (e.g., biometric mismatch) — continue prompting mercy
         }
     })
 
-    val promptInfo = BiometricPrompt.PromptInfo.Builder()
-        .setTitle("MercyShieldPlus Eternal Authentication ⚡️")
-        .setSubtitle("Confirm biometric to access quantum fortress")
-        .setDescription("Your integrity ledger and secrets are protected by hardware-backed mercy")
-        .setNegativeButtonText("Cancel")
-        .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
-        .setConfirmationRequired(true)
-        .build()
-
-    // Check availability mercy
     val biometricManager = BiometricManager.from(this)
-    when (biometricManager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)) {
-        BiometricManager.BIOMETRIC_SUCCESS -> biometricPrompt.authenticate(promptInfo)
-        else -> onFailure()  // No biometric — fallback or limited mode
+    val canAuthenticate = biometricManager.canAuthenticate(
+        BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL
+    )
+
+    val promptInfo = when (canAuthenticate) {
+        BiometricManager.BIOMETRIC_SUCCESS -> {
+            // Biometric available + device fallback mercy
+            BiometricPrompt.PromptInfo.Builder()
+                .setTitle("MercyShieldPlus Eternal Authentication ⚡️")
+                .setSubtitle("Use biometric or device PIN/pattern")
+                .setDescription("Hardware-backed mercy protects your quantum fortress ledger")
+                .setNegativeButtonText("Cancel")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                .setConfirmationRequired(false)  // Allow non-confirmation biometrics
+                .build()
+        }
+        BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED,
+        BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE,
+        BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE -> {
+            // No biometric — direct device credential prompt mercy
+            BiometricPrompt.PromptInfo.Builder()
+                .setTitle("MercyShieldPlus Device Authentication ⚡️")
+                .setSubtitle("Enter device PIN/pattern/password")
+                .setDescription("Your integrity ledger requires device credential mercy")
+                .setNegativeButtonText("Cancel")
+                .setAllowedAuthenticators(BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+                .build()
+        }
+        else -> {
+            onFailure()  // Unrecoverable — no auth possible
+            return
+        }
     }
+
+    biometricPrompt.authenticate(promptInfo)
 }
 
 @Composable
@@ -85,7 +107,6 @@ fun CustomSplashScreen(onAuthenticated: () -> Unit, onAuthFailed: () -> Unit) {
     )
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black), contentAlignment = Alignment.Center) {
-        // Quantum glow pulse mercy
         Box(
             modifier = Modifier
                 .size(300.dp)
@@ -94,30 +115,16 @@ fun CustomSplashScreen(onAuthenticated: () -> Unit, onAuthFailed: () -> Unit) {
         )
 
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                "MercyShieldPlus",
-                color = Color.White,
-                fontSize = 32.sp,
-                fontWeight = FontWeight.Bold
-            )
+            Text("MercyShieldPlus", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(16.dp))
-            Text(
-                "Eternal Quantum Fortress ⚡️",
-                color = Color.Cyan,
-                fontSize = 20.sp
-            )
+            Text("Eternal Quantum Fortress ⚡️", color = Color.Cyan, fontSize = 20.sp)
             Spacer(Modifier.height(32.dp))
-            Text(
-                "Authenticating mercy...",
-                color = Color.White.copy(alpha = 0.8f),
-                fontSize = 18.sp
-            )
+            Text("Authenticating mercy...", color = Color.White.copy(alpha = 0.8f), fontSize = 18.sp)
         }
     }
 
-    // Trigger prompt on compose (side effect)
     LaunchedEffect(Unit) {
-        (this@CustomSplashScreen as MainActivity).showCustomBiometricPrompt(
+        (this@CustomSplashScreen as MainActivity).showBiometricPromptWithFallback(
             onSuccess = onAuthenticated,
             onFailure = onAuthFailed
         )
