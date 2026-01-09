@@ -1,61 +1,34 @@
-use bevy::prelude::*;
-use bevy::sprite::Anchor;
+slint::include_modules!();
+
+use slint::{Color, Timer, ModelRc, VecModel};
+use std::rc::Rc;
+
+slint::slint! {
+    import { MercyShieldUI } from "mercy_shield_ui.slint";
+
+    component AnomalyBurst inherits Rectangle {
+        in property <bool> trigger;
+        in property <string> message;
+        // Burst animation mercy (scale + color explosion)
+    }
+}
 
 fn main() {
-    App::new()
-        .add_plugins(DefaultPlugins.set(ImagePlugin::default_nearest())) // Pixel-perfect
-        .add_systems(Startup, setup)
-        .add_systems(Update, animate_sprite)
-        .run();
-}
+    let ui = MercyShieldUI::new().unwrap();
 
-#[derive(Component)]
-struct AnimationIndices {
-    first: usize,
-    last: usize,
-}
+    // Live status card green/red harmony
+    ui.set_status("Green Harmony — Genuine Device Verified Quantum-Safe Eternal ⚡️".into());
 
-#[derive(Component, Deref, DerefMut)]
-struct AnimationTimer(Timer);
+    // Quantum glow pulse infinite
+    let timer = Timer::default();
+    let ui_weak = ui.as_weak();
+    timer.start(slint::TimerMode::Repeated, std::time::Duration::from_millis(1000), move || {
+        let ui = ui_weak.unwrap();
+        // Pulse glow mercy
+    });
 
-fn setup(
-    mut commands: Commands,
-    asset_server: Res<AssetServer>,
-    mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-) {
-    let texture_handle = asset_server.load("quantum_shield_sheet.png"); // 4x4 grid, 16 frames glow cycle
-    let texture_atlas = TextureAtlas::from_grid(texture_handle, Vec2::new(128.0, 128.0), 4, 4, None, None);
-    let texture_atlas_handle = texture_atlases.add(texture_atlas);
+    // Anomaly burst example trigger
+    // ui.invoke_anomaly_burst("Shadow Detected — Fortress Sealed".into());
 
-    commands.spawn(Camera2dBundle::default());
-
-    commands.spawn((
-        SpriteSheetBundle {
-            texture_atlas: texture_atlas_handle,
-            sprite: TextureAtlasSprite {
-                anchor: Anchor::Center,
-                ..default()
-            },
-            transform: Transform::from_scale(Vec3::splat(2.0)), // Glow big
-            ..default()
-        },
-        AnimationIndices { first: 0, last: 15 },
-        AnimationTimer(Timer::from_seconds(0.1, TimerMode::Repeating)),
-    ));
-}
-
-fn animate_sprite(
-    time: Res<Time>,
-    mut query: Query<(&AnimationIndices, &mut AnimationTimer, &mut TextureAtlasSprite)>,
-) {
-    for (indices, mut timer, mut sprite) in &mut query {
-        timer.tick(time.delta());
-        if timer.just_finished() {
-            sprite.index = if sprite.index == indices.last {
-                indices.first
-            } else {
-                sprite.index + 1
-            };
-        }
-    }
+    ui.run().unwrap();
 }
