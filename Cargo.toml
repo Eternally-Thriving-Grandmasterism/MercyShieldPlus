@@ -1,25 +1,22 @@
 [package]
-name = "mercy_shield_plus"
-version = "1.0.0"
+name = "mercy_pq_core"
+version = "0.1.0"
 edition = "2021"
-description = "MercyShieldPlus Proprietary Quantum Fortress Rust Native Eternal ⚡️"
-license = "MIT"
 
 [dependencies]
-sha3 = "0.10"  # Minimal hash mercy (hand-code replace next)
+ml-kem = "0.2"  # Pure Rust FIPS 203 ML-KEM (RustCrypto – latest 2026 stable)
+ml-dsa = "0.1"  # Pure Rust FIPS 204 ML-DSA (RustCrypto – matching ecosystem)
+rand_core = { version = "0.6", features = ["getrandom"] }
+getrandom = { version = "0.2", features = ["custom"] }  # Android-compatible OsRng
+zeroize = { version = "1.7", features = ["derive"] }  # Auto-zero secrets + ZeroizeOnDrop
+aes-gcm = "0.10"  # Hybrid symmetric from shared secret (constant-time, AEAD)
+uniffi = "0.25"  # Bidirectional Kotlin interop – export functions cleanly
 
 [lib]
-crate-type = ["cdylib"]  # JNI lib mercy
+name = "mercy_pq"
+crate-type = ["cdylib", "staticlib"]  # Android .so + flexible
 
-[target.aarch64-linux-android]
-rustflags = ["-C", "link-arg=-llog"]
-
-[target.armv7-linux-androideabi]
-rustflags = ["-C", "link-arg=-llog"]
-
-# Add other ABIs if needed (uncomment)
-# [target.i686-linux-android]
-# rustflags = ["-C", "link-arg=-llog"]
-
-# [target.x86_64-linux-android]
-# rustflags = ["-C", "link-arg=-llog"]
+[profile.release]
+opt-level = "s"  # Size-optimized
+lto = true       # Link-time opts for minimal binary
+strip = true     # Strip debug symbols
