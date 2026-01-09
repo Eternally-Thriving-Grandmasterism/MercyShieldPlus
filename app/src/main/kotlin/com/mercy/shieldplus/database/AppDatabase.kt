@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import com.mercyshieldplus.util.SecurePassphraseManager
 import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
 
@@ -15,13 +16,12 @@ abstract class AppDatabase : RoomDatabase() {
         @Volatile
         private var INSTANCE: AppDatabase? = null
 
-        // Passphrase mercy — derive from Android Keystore or hardcode dev; production use secure source
-        private const val PASSPHRASE = "mercy_shield_plus_eternal_quantum_fortress_2026"  // Change to secure random/device-bound
-
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                val passphraseBytes = PASSPHRASE.toCharArray()
-                val factory = SupportFactory(SQLiteDatabase.getBytes(passphraseBytes))
+                // Derive passphrase from Keystore-backed secure storage
+                val passphrase = SecurePassphraseManager.getPassphrase(context.applicationContext)
+
+                val factory = SupportFactory(SQLiteDatabase.getBytes(passphrase))
 
                 val instance = Room.databaseBuilder(
                     context.applicationContext,
@@ -29,8 +29,11 @@ abstract class AppDatabase : RoomDatabase() {
                     "mercyshieldplus_database_encrypted"
                 )
                     .openHelperFactory(factory)
-                    .fallbackToDestructiveMigration()  // Dev mercy; add migrations production
+                    .fallbackToDestructiveMigration()  // Dev mercy; production migrations
                     .build()
+
+                // Zeroize passphrase char[] after DB open (best effort)
+                passphrase.fill('\u0000')
 
                 INSTANCE = instance
                 instance
