@@ -14,6 +14,7 @@ import com.mercyshieldplus.util.ServerSyncUtil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 // uniFFI mercy
@@ -40,6 +41,16 @@ class ShieldViewModel(application: Application) : AndroidViewModel(application) 
     private val _integrityHistory = MutableStateFlow<List<IntegrityReportEntry>>(emptyList())
     val integrityHistory: StateFlow<List<IntegrityReportEntry>> = _integrityHistory.asStateFlow()
 
+    private val allLogs = dao.getAllLogs()
+
+    private val _logFilter = MutableStateFlow<String>("All")
+    val logFilter: StateFlow<String> = _logFilter.asStateFlow()
+
+    val filteredLogs = combine(allLogs, logFilter) { logs, filter ->
+        if (filter == "All") logs
+        else logs.filter { it.logType == filter }
+    }
+
     private val gson = Gson()
 
     init {
@@ -47,6 +58,17 @@ class ShieldViewModel(application: Application) : AndroidViewModel(application) 
         loadHistoryFromDb()
         logEvent("INFO", "App started — fortress awakening")
         checkIntegrity()
+    }
+
+    fun setLogFilter(filter: String) {
+        _logFilter.value = filter
+    }
+
+    fun clearLogs() {
+        viewModelScope.launch {
+            dao.clearLogs()
+            logEvent("INFO", "Logs cleared by user")
+        }
     }
 
     fun refreshIntegrity() {
@@ -154,4 +176,4 @@ class ShieldViewModel(application: Application) : AndroidViewModel(application) 
     }
 }
 
-// ShieldState unchanged
+// ShieldState unchanged mercy
