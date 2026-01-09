@@ -1,19 +1,13 @@
 [package]
-name = "mercyshieldplus"
-version = "0.1.0"
+name = "mercy_shield_plus"
+version = "1.0.0"
 edition = "2021"
-description = "Proprietary Foolproof Quantum Fortress Android Core Eternal ⚡️"
+description = "MercyShieldPlus Proprietary Quantum Fortress Rust Native Eternal ⚡️"
 license = "MIT"
 
-[lib]
-name = "mercyshieldplus"
-crate-type = ["cdylib"]  # Android native lib mercy
-
 [dependencies]
-uniffi = { version = "0.25", features = ["bindgen"] }  # 2026 latest uniFFI divine
+slint = "1.6"  # UI mercy live card + bursts
+sha3 = "0.10"  # Proprietary hash (minimal external, replace hand-coded next)
 
-[build-dependencies]
-uniffi = { version = "0.25", features = ["build"] }
-
-[features]
-default = []
+[dev-dependencies]
+# Tests mercy
