@@ -4,8 +4,10 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import com.mercyshieldplus.database.AppDatabase
 import com.mercyshieldplus.database.IntegrityReportEntity
+import com.mercyshieldplus.database.LogEntryEntity
 import com.mercyshieldplus.util.PlayIntegrityUtil
 import com.mercyshieldplus.util.RootDetectionUtil
 import com.mercyshieldplus.util.ServerSyncUtil
@@ -43,11 +45,19 @@ class ShieldViewModel(application: Application) : AndroidViewModel(application) 
     init {
         PlayIntegrityUtil.init(getApplication())
         loadHistoryFromDb()
+        logEvent("INFO", "App started — fortress awakening")
         checkIntegrity()
     }
 
     fun refreshIntegrity() {
+        logEvent("INFO", "Manual integrity refresh triggered")
         checkIntegrity()
+    }
+
+    private fun logEvent(type: String, message: String) {
+        viewModelScope.launch {
+            dao.insertLog(LogEntryEntity(logType = type, message = message))
+        }
     }
 
     private fun loadHistoryFromDb() {
@@ -84,12 +94,14 @@ class ShieldViewModel(application: Application) : AndroidViewModel(application) 
     private fun checkIntegrity() {
         viewModelScope.launch {
             try {
+                logEvent("INFO", "Integrity check started")
+
                 val suspiciousFiles = RootDetectionUtil.detectSuspiciousFiles()
                 val suspiciousProps = RootDetectionUtil.detectSuspiciousProps()
                 val anyKernelRoot = RootDetectionUtil.isAnyKernelRootPresent(getApplication())
 
                 val bindData = "integrity_check_${System.currentTimeMillis()}"
-                val cloudProjectNumber = 123456789012L  // Your project number mercy
+                val cloudProjectNumber = 123456789012L
                 val playToken = PlayIntegrityUtil.requestIntegrityToken(cloudProjectNumber, bindData)
 
                 val report = MercyShieldPlus.evaluateIntegrity(
@@ -102,7 +114,7 @@ class ShieldViewModel(application: Application) : AndroidViewModel(application) 
                 val jsonReport = MercyShieldPlus.reportToJson(report)
                 val detailsJson = gson.toJson(report.details)
 
-                // Persist to Room
+                // Persist report
                 val entity = IntegrityReportEntity(
                     isGenuine = report.riskScore == 0u,
                     detailsJson = detailsJson,
@@ -115,42 +127,31 @@ class ShieldViewModel(application: Application) : AndroidViewModel(application) 
                 )
                 dao.insert(entity)
 
-                // On anomaly — generate blob + sync mercy
+                logEvent(if (report.riskScore == 0u) "INFO" else "ANOMALY", "Integrity check completed — risk: ${report.riskScore}")
+
+                // Anomaly sync mercy
                 if (report.riskScore > 0u) {
                     val serverPkBytes = ServerSyncUtil.getServerKemPkBytes()
-
-                    // Assume local DSA SK (future Keystore persist; here generate fresh for demo)
-                    val (kemPk, dsaPk) = MercyShieldPlus.generatePqKeypair()  // Use persisted later
-                    // val localDsaSkBytes = ... persisted
-
                     val blob = MercyShieldPlus.pqSecureAttestationBlob(
                         jsonReport.toByteArray(),
                         serverPkBytes,
-                        null  // No local sign for simplicity; add SK for full
+                        null  // Add local SK when persisted
                     )
 
                     val syncSuccess = ServerSyncUtil.sendAnomalyBlob(blob)
-
-                    // Mercy feedback (add to details or toast)
-                    val syncDetail = if (syncSuccess) "Anomaly synced to mercy server ✓" else "Sync failed — offline mercy"
-                    // Update current state or history
+                    logEvent(if (syncSuccess) "SYNC_SUCCESS" else "SYNC_FAILURE", "Anomaly blob sync attempt — ${if (syncSuccess) "success" else "failed"}")
                 }
 
-                // Current UI state
                 _shieldState.value = when {
                     report.riskScore == 0u -> ShieldState.Genuine(report.details)
                     else -> ShieldState.Anomaly(report.verdict.toString(), report.details, report.riskScore)
                 }
             } catch (e: Exception) {
+                logEvent("ERROR", "Integrity check failed: ${e.message}")
                 _shieldState.value = ShieldState.Error(e.message ?: "Fortress anomaly")
             }
         }
     }
 }
 
-sealed class ShieldState {
-    object Loading : ShieldState()
-    data class Genuine(val details: List<String>) : ShieldState()
-    data class Anomaly(val verdict: String, val details: List<String>, val risk: UByte) : ShieldState()
-    data class Error(val message: String) : ShieldState()
-}
+// ShieldState unchanged
