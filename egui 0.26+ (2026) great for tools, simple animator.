@@ -1,0 +1,42 @@
+// main.rs
+use eframe::egui;
+
+fn main() -> Result<(), eframe::Error> {
+    let options = eframe::NativeOptions::default();
+    eframe::run_native(
+        "MercyShieldPlus ⚡️",
+        options,
+        Box::new(|_cc| Box::new(MercyApp::default())),
+    )
+}
+
+struct MercyApp {
+    glow: f32,
+    anomaly: bool,
+}
+
+impl Default for MercyApp {
+    fn default() -> Self {
+        Self { glow: 0.0, anomaly: false }
+    }
+}
+
+impl eframe::App for MercyApp {
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
+        self.glow += 0.01;
+        ctx.request_repaint();
+
+        egui::CentralPanel::default().show(ctx, |ui| {
+            let scale = 1.0 + 0.2 * (self.glow * std::f32::consts::PI * 2.0).sin();
+            let color = if self.anomaly { egui::Color32::RED } else { egui::Color32::GREEN };
+
+            ui.vertical_centered(|ui| {
+                ui.add(egui::Label::new(egui::RichText::new("⚡️").size(100.0 * scale as f32)).strong());
+                ui.label(egui::RichText::new(if self.anomaly { "Anomaly Detected ⚠️" } else { "Genuine Shielded ⚡️" }).color(color).size(30.0));
+                if ui.button("Trigger Anomaly").clicked() {
+                    self.anomaly = !self.anomaly;
+                }
+            });
+        });
+    }
+}
