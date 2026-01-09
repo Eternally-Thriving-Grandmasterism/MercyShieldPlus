@@ -1,8 +1,18 @@
 [package]
-name = "mercy_kyber_demo"
+name = "mercyshieldplus"
 version = "0.1.0"
 edition = "2021"
+description = "Proprietary Foolproof Quantum Fortress Core Eternal ⚡️"
+license = "MIT"
+repository = "https://github.com/Eternally-Thriving-Grandmasterism/MercyShieldPlus"
+
+[lib]
+name = "mercyshieldplus"
+crate-type = ["cdylib", "staticlib"]  # Android native + static mercy
 
 [dependencies]
-pqcrypto-kyber = "0.3"
-pqcrypto-traits = "0.3"
+# Minimal no external yet — custom math novel transcription next
+# Future: zero-deps pure std for ultimate foolproof
+
+[features]
+default = []
