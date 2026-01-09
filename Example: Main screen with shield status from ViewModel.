@@ -1,0 +1,22 @@
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MercyShieldScreen(viewModel: MercyViewModel = viewModel()) {
+    val state by viewModel.state.collectAsState()
+
+    Scaffold(topBar = { TopAppBar(title = { Text("MercyShieldPlus ⚡️") }) }) { padding ->
+        Column(modifier = Modifier.padding(padding)) {
+            ShieldStatusCard(state.status)
+            if (state.anomalyDetected) AnomalyBurstDialog(onDismiss = viewModel::clearAnomaly)
+            BuddyMessage(state.buddyMessage)
+        }
+    }
+}
+
+@Composable
+fun ShieldStatusCard(status: ShieldStatus) {
+    Card(modifier = Modifier.fillMaxWidth().padding(16.dp),
+         colors = if (status.isGenuine) CardDefaults.cardColors(containerColor = Color.Green) 
+                  else CardDefaults.cardColors(containerColor = Color.Red)) {
+        Text(text = status.message, modifier = Modifier.padding(16.dp), style = MaterialTheme.typography.headlineMedium)
+    }
+}
