@@ -1,6 +1,6 @@
 [package]
 name = "mercyshieldplus"
-version = "0.4.0"
+version = "0.5.0"
 edition = "2021"
 description = "Proprietary Foolproof Quantum Fortress Core Eternal ⚡️"
 license = "MIT"
@@ -13,7 +13,8 @@ crate-type = ["cdylib"]
 uniffi = { version = "0.25", features = ["bindgen"] }
 pqcrypto-kyber = "0.3"
 pqcrypto-dilithium = "0.3"
-pqcrypto-falcon = "0.3"  # Falcon-512 lighter signatures proprietary base
+pqcrypto-falcon = "0.3"
+pqcrypto-sphincsplus = "0.3"  # SPHINCS+ hash hedge proprietary base
 pqcrypto-traits = "0.3"
 
 [build-dependencies]
