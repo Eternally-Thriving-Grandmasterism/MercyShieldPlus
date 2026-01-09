@@ -1,0 +1,64 @@
+// main.rs
+use slint::slint;
+
+slint! {
+    import { Button, VerticalBox } from "std-widgets.slint";
+
+    export component MercyShield inherits Window {
+        width: 400px;
+        height: 600px;
+        background: black;
+
+        property <float> glow-scale: 1.0;
+        property <color> shield-color: green;
+        property <string> status: "Genuine Shielded ⚡️";
+
+        animate glow-scale { duration: 1000ms; easing: ease-in-out; loop: true; }
+        animate shield-color { duration: 500ms; }
+
+        callback trigger_anomaly();
+
+        VerticalBox {
+            alignment: center;
+
+            Rectangle {
+                width: 200px;
+                height: 200px;
+                background: radial-gradient(circle, cyan, transparent);
+                scale: glow-scale;
+                animate scale { duration: 1000ms; }
+
+                Text {
+                    text: "⚡️";
+                    font-size: 80px;
+                    color: white;
+                    horizontal-alignment: center;
+                }
+            }
+
+            Text {
+                text: status;
+                font-size: 32px;
+                color: shield-color;
+            }
+
+            Button {
+                text: "Simulate Anomaly";
+                clicked => { root.trigger_anomaly(); }
+            }
+        }
+
+        states [
+            anomaly when trigger_anomaly: {
+                shield-color: red;
+                status: "Anomaly Detected ⚠️";
+                glow-scale: 1.5;
+            }
+        ]
+    }
+}
+
+fn main() {
+    let ui = MercyShield::new().unwrap();
+    ui.run().unwrap();
+}
