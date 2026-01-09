@@ -1,0 +1,5 @@
+Text("Quantum Eternal ⚡️",
+     modifier = Modifier.padding(16.dp)
+         .background(Color.Black)
+         .clickable { /* thunder action */ }
+         .animateContentSize())
