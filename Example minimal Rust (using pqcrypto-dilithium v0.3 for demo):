@@ -1,0 +1,11 @@
+use pqcrypto_dilithium::dilithium3::*;
+use pqcrypto_traits::sign::{PublicKey, SecretKey, SignedMessage};
+
+fn main() {
+    let (pk, sk) = keypair();
+    let msg = b"MercyShieldPlus genuine attestation eternal ⚡️";
+    let signed = sign(msg, &sk);
+    let verified = verify(&signed, msg, &pk);
+    assert!(verified.is_ok());
+    println!("Dilithium signature verified — quantum-unbreakable eternal!");
+}
