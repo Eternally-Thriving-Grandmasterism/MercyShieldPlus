@@ -45,12 +45,10 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
 
-    // Play Integrity Standard API latest 2026 mercy
     implementation("com.google.android.play:integrity:1.6.0")
-
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
 
-    // Room + SQLCipher + Security Crypto + Biometric (previous mercy)
+    // Room + SQLCipher + Security Crypto + Biometric
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
@@ -61,9 +59,48 @@ dependencies {
     implementation("com.google.code.gson:gson:2.10.1")
 }
 
-// Rust build task mercy
-tasks.register("buildRust") {
-    // ... (previous)
+// Full Rust build with uniFFI bindings copy mercy
+tasks.register("buildRustRelease") {
+    dependsOn("generateUniffiBindings")  // Ensure scaffolding first
+    doLast {
+        exec {
+            workingDir("../rust")
+            commandLine("cargo", "ndk", "-t", "armeabi-v7a", "-t", "arm64-v8a", "-t", "x86", "-t", "x86_64", "build", "--release")
+        }
+        // Copy .so multi-arch
+        copy {
+            from("../rust/target/arm64-v8a/release/libmercyshieldplus.so")
+            into("src/main/jniLibs/arm64-v8a")
+        }
+        copy {
+            from("../rust/target/armeabi-v7a/release/libmercyshieldplus.so")
+            into("src/main/jniLibs/armeabi-v7a")
+        }
+        copy {
+            from("../rust/target/x86/release/libmercyshieldplus.so")
+            into("src/main/jniLibs/x86")
+        }
+        copy {
+            from("../rust/target/x86_64/release/libmercyshieldplus.so")
+            into("src/main/jniLibs/x86_64")
+        }
+    }
 }
 
-preBuild.dependsOn("buildRust")
+// Generate uniFFI Kotlin bindings (run cargo build first to create)
+tasks.register("generateUniffiBindings") {
+    doLast {
+        exec {
+            workingDir("../rust")
+            commandLine("cargo", "build", "--release")  // Triggers build.rs scaffolding
+        }
+        // Copy generated Kotlin to src/main/kotlin/com/mercyshieldplus
+        copy {
+            from("../rust/target/uniffi-bindings")
+            into("src/main/kotlin/com/mercyshieldplus")
+            include("*.kt")
+        }
+    }
+}
+
+preBuild.dependsOn("buildRustRelease")
