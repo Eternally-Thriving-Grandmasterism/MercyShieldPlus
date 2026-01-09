@@ -1,0 +1,23 @@
+@Composable
+fun ShieldStatusIndicator(isGenuine: Boolean) {
+    val transition = updateTransition(isGenuine, label = "ShieldStatus")
+    val backgroundColor by transition.animateColor { genuine ->
+        if (genuine) Color.Green else Color.Red
+    }
+    val text by transition.animateDp { genuine ->
+        if (genuine) 32.sp else 40.sp // Pulse emphasis on anomaly
+    }
+
+    Box(
+        modifier = Modifier
+            .size(300.dp)
+            .background(backgroundColor.copy(alpha = 0.8f), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = if (isGenuine) "Genuine Shielded ⚡️" else "Anomaly Detected ⚠️",
+            fontSize = text,
+            color = Color.White
+        )
+    }
+}
