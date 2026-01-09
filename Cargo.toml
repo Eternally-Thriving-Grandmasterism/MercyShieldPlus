@@ -6,8 +6,20 @@ description = "MercyShieldPlus Proprietary Quantum Fortress Rust Native Eternal 
 license = "MIT"
 
 [dependencies]
-slint = "1.6"  # UI mercy live card + bursts
-sha3 = "0.10"  # Proprietary hash (minimal external, replace hand-coded next)
+sha3 = "0.10"  # Minimal hash mercy (hand-code replace next)
 
-[dev-dependencies]
-# Tests mercy
+[lib]
+crate-type = ["cdylib"]  # JNI lib mercy
+
+[target.aarch64-linux-android]
+rustflags = ["-C", "link-arg=-llog"]
+
+[target.armv7-linux-androideabi]
+rustflags = ["-C", "link-arg=-llog"]
+
+# Add other ABIs if needed (uncomment)
+# [target.i686-linux-android]
+# rustflags = ["-C", "link-arg=-llog"]
+
+# [target.x86_64-linux-android]
+# rustflags = ["-C", "link-arg=-llog"]
