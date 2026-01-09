@@ -2,18 +2,18 @@
 name = "mercyshieldplus"
 version = "0.1.0"
 edition = "2021"
-description = "Proprietary Foolproof Quantum Fortress Core Eternal ⚡️"
+description = "Proprietary Foolproof Quantum Fortress Android Core Eternal ⚡️"
 license = "MIT"
-repository = "https://github.com/Eternally-Thriving-Grandmasterism/MercyShieldPlus"
 
 [lib]
 name = "mercyshieldplus"
-crate-type = ["cdylib", "staticlib"]  # Android native + static mercy
+crate-type = ["cdylib"]  # Android native lib mercy
 
 [dependencies]
-bevy = { version = "0.13", features = ["png"] }  # or 0.14 latest
-# Minimal no external yet — custom math novel transcription next
-# Future: zero-deps pure std for ultimate foolproof
+uniffi = { version = "0.25", features = ["bindgen"] }  # 2026 latest uniFFI divine
+
+[build-dependencies]
+uniffi = { version = "0.25", features = ["build"] }
 
 [features]
 default = []
