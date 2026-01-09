@@ -1,0 +1,25 @@
+@Composable
+fun BuddyMessage(message: String) {
+    AnimatedContent(
+        targetState = message,
+        transitionSpec = {
+            slideInVertically { height -> height } + fadeIn() with
+            slideOutVertically { height -> -height } + fadeOut()
+        }
+    ) { currentMessage ->
+        Card(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+                .animateContentSize(),
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF1E1E1E))
+        ) {
+            Text(
+                text = "Buddy: $currentMessage",
+                modifier = Modifier.padding(16.dp),
+                color = Color.Cyan,
+                style = MaterialTheme.typography.bodyLarge
+            )
+        }
+    }
+}
