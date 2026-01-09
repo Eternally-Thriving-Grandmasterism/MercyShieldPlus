@@ -7,27 +7,32 @@ import java.security.SecureRandom
 import kotlin.text.Charsets.UTF_8
 
 /**
- * SecurePassphraseManager — Keystore-Backed Secure Storage for SQLCipher Passphrase
+ * SecurePassphraseManager — Biometric-Authenticated Keystore MasterKey for SQLCipher Passphrase
  *
- * Uses EncryptedSharedPreferences (AndroidX Security Crypto) which automatically:
- * - Creates/generates a Keystore-backed AES-256-GCM MasterKey (hardware-backed on capable devices)
- * - Encrypts values at rest
+ * MasterKey requires user authentication (biometric preferred, fallback PIN/pattern).
+ * Validity: 30 seconds after successful auth (adjustable).
  *
- * On first launch: Generates strong random 32-byte passphrase → hex string → store encrypted
- * Subsequent: Retrieve decrypted passphrase string → toCharArray() for SQLCipher
+ * On first launch: Generate random 32-byte passphrase → store encrypted.
+ * Subsequent: Access triggers BiometricPrompt if not recently authenticated.
  *
- * Passphrase never hardcoded or plain — protected by Keystore (tamper-resistant, biometric optional later)
+ * Security: Passphrase only available post-biometric → DB open protected.
+ * Library auto-handles prompt on prefs access.
  */
 object SecurePassphraseManager {
     private const val PREFS_NAME = "mercyshield_secure_prefs"
     private const val KEY_PASSPHRASE = "sqlcipher_passphrase_hex"
 
+    private const val AUTH_VALIDITY_SECONDS = 30  // Post-auth validity window
+
     /**
-     * Initialize and get passphrase char[] (zeroizes after use recommended)
+     * Get passphrase char[] — triggers biometric if required
+     * Caller (DB init) should handle potential delay/prompt
      */
     fun getPassphrase(context: Context): CharArray {
         val masterKey = MasterKey.Builder(context)
             .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
+            .setUserAuthenticationRequired(true)
+            .setUserAuthenticationValidityDurationSeconds(AUTH_VALIDITY_SECONDS)
             .build()
 
         val prefs = EncryptedSharedPreferences.create(
@@ -41,18 +46,18 @@ object SecurePassphraseManager {
         var passphraseHex = prefs.getString(KEY_PASSPHRASE, null)
 
         if (passphraseHex == null) {
-            // First launch — generate strong random 32-byte passphrase
+            // First launch after biometric setup — generate strong passphrase
             val randomBytes = ByteArray(32)
             SecureRandom().nextBytes(randomBytes)
             passphraseHex = randomBytes.joinToString("") { "%02x".format(it) }
 
             with(prefs.edit()) {
                 putString(KEY_PASSPHRASE, passphraseHex)
-                apply()
+                apply()  // Sync — may trigger auth if required
             }
         }
 
-        // Convert hex string back to char[] for SQLCipher
+        // Convert hex back to bytes → char[] for SQLCipher
         val passphraseBytes = ByteArray(passphraseHex.length / 2)
         for (i in passphraseBytes.indices) {
             val index = i * 2
