@@ -2,17 +2,17 @@ package com.mercyshieldplus.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.mercyshieldplus.database.LogEntryEntity
+import com.mercyshieldplus.util.LogExportUtil
 import com.mercyshieldplus.viewmodel.ShieldViewModel
 import java.text.SimpleDateFormat
 import java.util.*
@@ -21,6 +21,7 @@ import java.util.*
 fun LogsScreen(viewModel: ShieldViewModel) {
     val logs by viewModel.filteredLogs.collectAsState()
     val selectedFilter by viewModel.logFilter.collectAsState()
+    val context = LocalContext.current
 
     val filterOptions = listOf("All", "INFO", "ANOMALY", "SYNC_SUCCESS", "SYNC_FAILURE", "ERROR")
 
@@ -31,7 +32,7 @@ fun LogsScreen(viewModel: ShieldViewModel) {
                 actions = {
                     var expanded by remember { mutableStateOf(false) }
                     IconButton(onClick = { expanded = true }) {
-                        Icon(Icons.Default.MoreVert, contentDescription = "Filter")
+                        Icon(Icons.Default.FilterList, contentDescription = "Filter")
                     }
                     DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
                         filterOptions.forEach { option ->
@@ -44,8 +45,16 @@ fun LogsScreen(viewModel: ShieldViewModel) {
                             )
                         }
                     }
+
+                    IconButton(onClick = {
+                        val uri = LogExportUtil.exportLogs(context, logs)
+                        LogExportUtil.shareLogsUri(context, uri)
+                    }) {
+                        Icon(Icons.Default.Share, contentDescription = "Export Logs")
+                    }
+
                     TextButton(onClick = { viewModel.clearLogs() }) {
-                        Text("Clear Logs")
+                        Text("Clear")
                     }
                 }
             )
@@ -65,6 +74,7 @@ fun LogsScreen(viewModel: ShieldViewModel) {
     }
 }
 
+// LogEntryCard unchanged mercy
 @Composable
 fun LogEntryCard(log: LogEntryEntity) {
     val backgroundColor = when (log.logType) {
