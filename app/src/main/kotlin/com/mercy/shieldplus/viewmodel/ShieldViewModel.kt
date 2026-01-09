@@ -4,11 +4,11 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
 import com.mercyshieldplus.database.AppDatabase
 import com.mercyshieldplus.database.IntegrityReportEntity
 import com.mercyshieldplus.util.PlayIntegrityUtil
 import com.mercyshieldplus.util.RootDetectionUtil
+import com.mercyshieldplus.util.ServerSyncUtil
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -99,6 +99,7 @@ class ShieldViewModel(application: Application) : AndroidViewModel(application) 
                     playToken
                 )
 
+                val jsonReport = MercyShieldPlus.reportToJson(report)
                 val detailsJson = gson.toJson(report.details)
 
                 // Persist to Room
@@ -113,6 +114,27 @@ class ShieldViewModel(application: Application) : AndroidViewModel(application) 
                     }
                 )
                 dao.insert(entity)
+
+                // On anomaly — generate blob + sync mercy
+                if (report.riskScore > 0u) {
+                    val serverPkBytes = ServerSyncUtil.getServerKemPkBytes()
+
+                    // Assume local DSA SK (future Keystore persist; here generate fresh for demo)
+                    val (kemPk, dsaPk) = MercyShieldPlus.generatePqKeypair()  // Use persisted later
+                    // val localDsaSkBytes = ... persisted
+
+                    val blob = MercyShieldPlus.pqSecureAttestationBlob(
+                        jsonReport.toByteArray(),
+                        serverPkBytes,
+                        null  // No local sign for simplicity; add SK for full
+                    )
+
+                    val syncSuccess = ServerSyncUtil.sendAnomalyBlob(blob)
+
+                    // Mercy feedback (add to details or toast)
+                    val syncDetail = if (syncSuccess) "Anomaly synced to mercy server ✓" else "Sync failed — offline mercy"
+                    // Update current state or history
+                }
 
                 // Current UI state
                 _shieldState.value = when {
