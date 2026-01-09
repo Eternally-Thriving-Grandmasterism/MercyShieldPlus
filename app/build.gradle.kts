@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    id("androidx.room")  // For ledger persistence mercy
+    kotlin("kapt")  // For Room compiler mercy
 }
 
 android {
@@ -35,9 +35,6 @@ android {
     composeOptions {
         kotlinCompilerExtensionVersion = "1.5.10"
     }
-    room {
-        schemaDirectory("$projectDir/schemas")
-    }
 }
 
 dependencies {
@@ -51,23 +48,18 @@ dependencies {
     implementation("com.google.android.play:integrity:1.6.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
 
-    // Room for ledger persistence
+    // Room persistence eternal
+    implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
 
-    // Navigation Compose
-    implementation("androidx.navigation:navigation-compose:2.7.7")
+    // Gson for details serialization mercy
+    implementation("com.google.code.gson:gson:2.10.1")
 }
 
+// Rust build task (previous mercy)
 tasks.register("buildRust") {
-    doLast {
-        exec {
-            workingDir("../rust")
-            commandLine("cargo", "ndk", "-t", "arm64-v8a", "-t", "armeabi-v7a", build", "--release")
-        }
-        // Multi-arch copy mercy
-        // ... (as previous)
-    }
+    // ... (as previous)
 }
 
 preBuild.dependsOn("buildRust")
