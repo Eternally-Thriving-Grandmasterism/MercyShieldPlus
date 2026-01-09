@@ -11,6 +11,7 @@ name = "mercyshieldplus"
 crate-type = ["cdylib", "staticlib"]  # Android native + static mercy
 
 [dependencies]
+bevy = { version = "0.13", features = ["png"] }  # or 0.14 latest
 # Minimal no external yet — custom math novel transcription next
 # Future: zero-deps pure std for ultimate foolproof
 
