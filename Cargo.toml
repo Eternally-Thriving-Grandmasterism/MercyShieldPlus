@@ -1,22 +1,35 @@
 [package]
-name = "mercy_pq_core"
-version = "0.1.0"
+name = "mercyshieldplus"
+version = "1.0.0"
 edition = "2021"
+description = "MercyShieldPlus — Proprietary Foolproof Quantum Fortress Android App Eternal ⚡️ Genuine Device Integrity + Custom PQ Crypto + Clean Novel Architecture"
+license = "MIT"
+authors = ["Eternally-Thriving-Grandmasterism"]
 
 [dependencies]
-ml-kem = "0.2"  # Pure Rust FIPS 203 ML-KEM (RustCrypto – latest 2026 stable)
-ml-dsa = "0.1"  # Pure Rust FIPS 204 ML-DSA (RustCrypto – matching ecosystem)
+ml-kem = "0.2"                  # Pure Rust FIPS 203 ML-KEM (2026 stable pinnacle)
+ml-dsa = "0.1"                  # Pure Rust FIPS 204 ML-DSA (matching ecosystem)
 rand_core = { version = "0.6", features = ["getrandom"] }
-getrandom = { version = "0.2", features = ["custom"] }  # Android-compatible OsRng
-zeroize = { version = "1.7", features = ["derive"] }  # Auto-zero secrets + ZeroizeOnDrop
-aes-gcm = "0.10"  # Hybrid symmetric from shared secret (constant-time, AEAD)
-uniffi = "0.25"  # Bidirectional Kotlin interop – export functions cleanly
+getrandom = { version = "0.2", features = ["custom"] }  # Android hardware RNG mercy
+zeroize = { version = "1.7", features = ["derive"] }    # Secrets auto-zero eternal
+aes-gcm = "0.10"                # Hybrid AEAD from shared secret (constant-time)
+uniffi = { version = "0.25", features = ["cdylib"] }   # Bidirectional Kotlin interop thunder
+
+# Optional future: slint = "1.6"  # Comment in for desktop UI prototype mercy
+# sha3 = "0.10"                 # If needed for proprietary hashes
+
+[build-dependencies]
+uniffi = { version = "0.25", features = ["build"] }
 
 [lib]
-name = "mercy_pq"
-crate-type = ["cdylib", "staticlib"]  # Android .so + flexible
+name = "mercyshieldplus"
+crate-type = ["cdylib", "staticlib"]  # Android .so + flexible mercy
 
 [profile.release]
-opt-level = "s"  # Size-optimized
-lto = true       # Link-time opts for minimal binary
-strip = true     # Strip debug symbols
+opt-level = "s"     # Size minimal
+lto = true          # Link-time opts
+strip = true        # Debug symbols stripped
+panic = "abort"     # Smaller binary, no unwind
+
+[profile.dev]
+opt-level = 0
