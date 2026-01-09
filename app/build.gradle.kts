@@ -1,7 +1,7 @@
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
-    kotlin("kapt")  // For Room compiler mercy
+    kotlin("kapt")
 }
 
 android {
@@ -45,33 +45,25 @@ dependencies {
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.material3:material3")
 
+    // Play Integrity Standard API latest 2026 mercy
     implementation("com.google.android.play:integrity:1.6.0")
+
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.8.0")
 
-    // Room persistence eternal
+    // Room + SQLCipher + Security Crypto + Biometric (previous mercy)
     implementation("androidx.room:room-runtime:2.6.1")
     implementation("androidx.room:room-ktx:2.6.1")
     kapt("androidx.room:room-compiler:2.6.1")
-
-    // SQLCipher for encrypted Room DB mercy
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
-
-    // Security Crypto for EncryptedSharedPreferences
     implementation("androidx.security:security-crypto-ktx:1.1.0")
-
-    // androidx.biometric for custom BiometricPrompt UI mercy
     implementation("androidx.biometric:biometric:1.2.0")
 
-    // OkHttp for server sync mercy
-    implementation("com.squareup.okhttp3:okhttp:4.12.0")
-
-    // Gson for details serialization mercy
     implementation("com.google.code.gson:gson:2.10.1")
 }
 
-// Rust build task (previous mercy)
+// Rust build task mercy
 tasks.register("buildRust") {
-    // ... (as previous multi-arch copy)
+    // ... (previous)
 }
 
 preBuild.dependsOn("buildRust")
