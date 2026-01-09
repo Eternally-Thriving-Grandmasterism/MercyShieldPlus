@@ -16,7 +16,7 @@ use base64::{Engine as _, engine::general_purpose::STANDARD as BASE64};
 
 #[derive(Serialize, Deserialize)]
 struct AttestationRequest {
-    blob: Vec<u8>,  // ciphertext || nonce || encrypted_payload (payload = json_report || signature)
+    blob: Vec<u8>,  // Raw blob: ciphertext || nonce || encrypted_payload (payload = json_report || signature)
 }
 
 #[derive(Serialize, Deserialize)]
@@ -53,18 +53,18 @@ async fn verify_attestation(
     let nonce = Nonce::from_slice(&blob[ct_len..ct_len + 12]);
     let mut encrypted_payload = blob[ct_len + 12..].to_vec();
 
-    // Decapsulate
+    // Decapsulate with server SK
     let shared_secret: MlKem768SharedSecret = MlKem768::decapsulate(&ciphertext, &state.server_sk);
     let aes_key = Zeroizing::new(*shared_secret.as_bytes());
     let cipher = Aes256Gcm::new_from_slice(&aes_key).unwrap();
 
-    // Decrypt
+    // Decrypt payload
     if cipher.decrypt_in_place(nonce, b"", &mut encrypted_payload).is_err() {
         return Json("Decryption failed — invalid blob or key".to_string());
     }
 
-    // Parse payload: report JSON (with dsa_pk_base64) + detached signature
-    let sig_len = 3296;  // ML-DSA-65 average sig size — adjust if variable or parse length
+    // Parse payload: signed report JSON bytes + detached signature
+    let sig_len = 3296;  // ML-DSA-65 typical sig size — adjust dynamically if needed
     if encrypted_payload.len() < sig_len {
         return Json("Payload too short for signature".to_string());
     }
@@ -78,10 +78,112 @@ async fn verify_attestation(
         Err(_) => return Json("Invalid report JSON".to_string()),
     };
 
-    // Extract client DSA public key (sent in report as base64 for bootstrap trust)
+    // Extract client DSA public key from signed report (bootstrap trust)
     let dsa_pk_base64 = match report_json["dsa_pk_base64"].as_str() {
         Some(s) => s,
-        None => return Json("Missing client DSA public key in report".to_string()),
+        None => return Json("Missing client DSA public key".to_string()),
+    };
+
+    let dsa_pk_bytes = match BASE64.decode(dsa_pk_base64) {
+        Ok(b) => b,
+        Err(_) => return Json("Invalid base64 DSA public key".to_string()),
+    };
+
+    let verifying_key = match ml_dsa::VerifyingKey::from_bytes(&dsa_pk_bytes) {
+        Ok(vk) => vk,
+        Err(_) => return Json("Invalid DSA public key format".to_string()),
+    };
+
+    // Verify detached signature
+    let signature = match Signature::from_bytes(signature_bytes) {
+        Ok(sig) => sig,
+        Err(_) => return Json("Invalid signature format".to_string()),
+    };
+
+    if verifying_key.verify(signed_data, &signature).is_err() {
+        return Json("ML-DSA signature verification failed — forged report".to_string());
+    }
+
+    // Signature valid — trust report
+    let play_token = match report_json["play_token"].as_str() {
+        Some(t) if !t.is_empty() && t != "null_token" => t,
+        _ => return Json("Missing valid Play Integrity token".to_string()),
+    };
+
+    // Server-side Play Integrity verification
+    let verify_url = format!("https://playintegrity.googleapis.com/v1/{}:decodeIntegrityToken", state.package_name);
+
+    let verify_body = TokenVerifyRequest {
+        integrity_token: play_token.to_string(),
+    };
+
+    let response = state.http_client
+        .post(&verify_url)
+        .bearer_auth(&state.play_api_key)
+        .json(&verify_body)
+        .send()
+        .await;
+
+    let play_verdict = match response {
+        Ok(resp) if resp.status().is_success() => {
+            let verify_resp: TokenVerifyResponse = match resp.json().await {
+                Ok(v) => v,
+                Err(_) => return Json("Failed to parse Play response".to_string()),
+            };
+
+            let payload = verify_resp.token_payload;
+
+            let device_ok = payload["deviceIntegrity"]["deviceRecognitionVerdict"]
+                .as_array()
+                .map(|arr| arr.iter().any(|v| v.as_str() == Some("MEETS_DEVICE_INTEGRITY")))
+                .unwrap_or(false);
+
+            let app_ok = payload["appIntegrity"]["appRecognitionVerdict"]
+                .as_str()
+                .map(|s| s == "PLAY_RECOGNIZED")
+                .unwrap_or(false);
+
+            if device_ok && app_ok {
+                "Genuine Eternal — Device + App integrity confirmed"
+            } else {
+                "Anomaly — Play Integrity verdict failed"
+            }
+        }
+        _ => "Play API verification failed",
+    };
+
+    // Final mercy response
+    Json(format!(
+        "PQ + Signature Valid ✓\nPlay Verdict: {}\nReport: {}",
+        play_verdict, report_str
+    ))
+}
+
+#[tokio::main]
+async fn main() {
+    // Load server ML-KEM secret key (env var hex/base64 mercy)
+    let server_sk_hex = std::env::var("SERVER_PQ_SK_HEX").expect("SERVER_PQ_SK_HEX env required");
+    let server_sk_bytes = hex::decode(server_sk_hex).expect("Invalid hex SK");
+    let server_sk = MlKem768SecretKey::from_bytes(&server_sk_bytes.try_into().unwrap()).unwrap();
+
+    // Play Integrity API key (OAuth bearer)
+    let play_api_key = std::env::var("PLAY_INTEGRITY_API_KEY").expect("PLAY API key required");
+
+    let state = Arc::new(AppState {
+        server_sk,
+        http_client: Client::new(),
+        play_api_key,
+        package_name: "com.mercyshieldplus".to_string(),
+    });
+
+    let app = Router::new()
+        .route("/verify", post(verify_attestation))
+        .with_state(state);
+
+    let addr = SocketAddr::from(([0, 0, 0, 0], 3000));
+    println!("Mercy Verifier eternal listening on {}", addr);
+    axum::Server::bind(&addr).serve(app.into_make_service()).await.unwrap();
+}        None => return Json("Missing client DSA public key in report".to_string()),
     };
 
     let dsa_pk_bytes = match BASE64.decode(dsa_pk_base64) {
