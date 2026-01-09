@@ -4,26 +4,27 @@ import android.content.Context
 import com.google.android.play.core.integrity.IntegrityManager
 import com.google.android.play.core.integrity.IntegrityManagerFactory
 import com.google.android.play.core.integrity.IntegrityTokenRequest
+import com.google.android.play.core.integrity.IntegrityTokenResponse
 import kotlinx.coroutines.tasks.await
-import java.security.SecureRandom
-import java.util.Base64
+import java.security.MessageDigest
 
 /**
- * PlayIntegrityUtil — Eternal Mercy Wrapper for Standard Play Integrity API (2026)
- * 
- * Handles nonce generation + async token request.
- * Init once in Application or ViewModel.
- * 
+ * PlayIntegrityUtil — Eternal Mercy Wrapper for Play Integrity Standard API (2026 v1.6.0)
+ *
+ * Standard API: Low latency, on-demand, automatic protections (no nonce needed).
+ * Token fetched client-side, raw token passed for server verification (full verdicts).
+ * Optional requestHash for binding to action/data (anti-tampering).
+ *
  * Requirements:
- * - Linked Google Cloud project (Play Console → App Integrity → Play Integrity API enabled)
- * - Cloud project number in request (long)
- * - Server-side verification recommended (full resilience)
+ * - Play Integrity API enabled in Google Cloud project.
+ * - Cloud project linked in Play Console (App integrity).
+ * - Project number (long) configured.
  */
 object PlayIntegrityUtil {
     private var integrityManager: IntegrityManager? = null
 
     /**
-     * Initialize with app Context (call once, e.g., in Application.onCreate or ViewModel init)
+     * Initialize with app Context (call once early, e.g., Application.onCreate)
      */
     fun init(context: Context) {
         if (integrityManager == null) {
@@ -32,35 +33,41 @@ object PlayIntegrityUtil {
     }
 
     /**
-     * Generate secure random nonce (24 bytes → URL-safe Base64, no padding)
+     * Optional: Generate binding hash (SHA256 of action data string)
+     * Use to bind token to specific request/context.
      */
-    fun generateNonce(): String {
-        val bytes = ByteArray(24)
-        SecureRandom().nextBytes(bytes)
-        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes)
+    private fun generateRequestHash(data: String): ByteArray {
+        return MessageDigest.getInstance("SHA-256").digest(data.toByteArray())
     }
 
     /**
-     * Request integrity token asynchronously
-     * Returns token string on success, null on failure (with mercy logging possible)
+     * Request Standard integrity token asynchronously
      *
-     * @param nonce Client-generated nonce (use generateNonce())
-     * @param cloudProjectNumber Your Google Cloud project number (long) — from Play Console
+     * @param cloudProjectNumber Your linked Google Cloud project number (long)
+     * @param bindData Optional string to bind token (e.g., "integrity_check_${System.currentTimeMillis()}")
+     * @return Raw token string on success, "null_token" on failure
      */
-    suspend fun requestIntegrityToken(nonce: String, cloudProjectNumber: Long = YOUR_CLOUD_PROJECT_NUMBER_HERE): String? {
-        val manager = integrityManager ?: return null.also { /* Mercy log: "IntegrityManager not initialized" */ }
+    suspend fun requestIntegrityToken(
+        cloudProjectNumber: Long,
+        bindData: String? = null
+    ): String {
+        val manager = integrityManager ?: return "null_token".also { /* Mercy log: "Manager not initialized" */ }
 
         return try {
-            val request = IntegrityTokenRequest.builder()
-                .setNonce(nonce)
+            val builder = IntegrityTokenRequest.builder()
                 .setCloudProjectNumber(cloudProjectNumber)
-                .build()
 
-            val response = manager.requestIntegrityToken(request).await()
-            response.token()
+            bindData?.let {
+                builder.setRequestHash(generateRequestHash(it))
+            }
+
+            val request = builder.build()
+
+            val response: IntegrityTokenResponse = manager.requestIntegrityToken(request).await()
+            response.token() ?: "null_token"
         } catch (e: Exception) {
-            // Mercy handling: e.message (API error, network, etc.)
-            null
+            // Mercy handling: network/API errors
+            "null_token"
         }
     }
 }
