@@ -1,0 +1,5 @@
+val navController = rememberNavController()
+NavHost(navController, startDestination = "home") {
+    composable("home") { MercyShieldScreen() }
+    composable("settings") { SettingsScreen() }
+}
