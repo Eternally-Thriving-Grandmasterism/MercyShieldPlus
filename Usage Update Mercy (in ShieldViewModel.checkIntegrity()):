@@ -1,0 +1,7 @@
+val suspiciousFiles = RootDetectionUtil.detectSuspiciousFiles()
+val suspiciousProps = RootDetectionUtil.detectSuspiciousProps()
+val anyKernelRoot = RootDetectionUtil.isAnyKernelRootPresent(getApplication())
+
+if (RootDetectionUtil.isKernelSUPresent()) {
+    suspiciousFiles += "KernelSU indicators detected"
+}
