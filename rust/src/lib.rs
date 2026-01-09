@@ -152,6 +152,105 @@ mod tests {
 
         let blob_bytes = BASE64.decode(blob_b64).unwrap();
         assert!(blob_bytes.len() > MlKem768Ciphertext::BYTE_LEN + 12 + 16, "Blob too short");
+    }
+
+    #[test]
+    fn test_blob_with_signature() {
+        let report = b"{\"risk\":0}".to_vec();
+
+        let (_kem_pk, dsa_pk_b64) = generate_pq_keypair();
+        let (kem_pk_server, dsa_pk_client) = generate_pq_keypair();  // Client has SK
+
+        let blob_b64 = pq_secure_attestation_blob(
+            report.clone(),
+            kem_pk_server,
+            Some(dsa_pk_client.clone()),  // Sign with client SK
+        );
+
+        let blob_bytes = BASE64.decode(blob_b64).unwrap();
+        assert!(blob_bytes.len() > 4000, "Blob missing signature length");
+    }
+
+    #[test]
+    fn test_derive_aes_key() {
+        let (_sk, _pk) = MlKem768::generate(&mut OsRng);
+        let (ct, ss) = MlKem768::encapsulate(&_pk, &mut OsRng);
+
+        let key = derive_aes_key(&ss);
+        assert_eq!(key.len(), 32, "Derived key wrong size");
+        assert_ne!(*key, [0u8; 32], "Derived key all zero");
+    }
+}
+    let (ciphertext, shared_secret) = MlKem768::encapsulate(&server_pk, &mut OsRng);
+
+    let aes_key = derive_aes_key(&shared_secret);
+    let cipher = Aes256Gcm::new(&aes_key);
+
+    let mut nonce_bytes = [0u8; 12];
+    OsRng.fill_bytes(&mut nonce_bytes);
+    let nonce = Nonce::from_slice(&nonce_bytes);
+
+    let mut encrypted_payload = payload;
+    cipher.encrypt_in_place(nonce, b"", &mut encrypted_payload).expect("Encryption failed");
+
+    let mut blob = ciphertext.into_bytes().to_vec();
+    blob.extend_from_slice(&nonce_bytes);
+    blob.extend_from_slice(&encrypted_payload);
+
+    BASE64.encode(blob)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_key_generation_non_empty() {
+        let (kem_pk_b64, dsa_pk_b64) = generate_pq_keypair();
+        assert!(!kem_pk_b64.is_empty(), "KEM PK empty");
+        assert!(!dsa_pk_b64.is_empty(), "DSA PK empty");
+
+        let kem_pk_bytes = BASE64.decode(&kem_pk_b64).unwrap();
+        assert_eq!(kem_pk_bytes.len(), MlKem768PublicKey::BYTE_LEN, "Wrong KEM PK size");
+    }
+
+    #[test]
+    fn test_sign_verify_roundtrip() {
+        let message = b"MercyShieldPlus Eternal Integrity Report ⚡️".to_vec();
+
+        let (_kem_pk_b64, dsa_pk_b64) = generate_pq_keypair();  // Fresh keys
+        let (kem_pk_b64_2, dsa_pk_b64_2) = generate_pq_keypair();  // Another for SK
+
+        // Use second pair's SK to sign (simulate persisted)
+        let sig_b64 = pq_sign_data(dsa_pk_b64_2.clone(), message.clone());
+
+        let verified = pq_verify_data(dsa_pk_b64_2, message, sig_b64);
+        assert!(verified, "Signature verification failed on roundtrip");
+    }
+
+    #[test]
+    fn test_sign_verify_tampered_message() {
+        let message = b"Original Report".to_vec();
+        let tampered = b"Tampered Report".to_vec();
+
+        let (_kem_pk_b64, dsa_pk_b64) = generate_pq_keypair();
+        let (kem_pk_b64_2, dsa_pk_b64_2) = generate_pq_keypair();
+
+        let sig_b64 = pq_sign_data(dsa_pk_b64_2.clone(), message);
+
+        let verified = pq_verify_data(dsa_pk_b64_2, tampered, sig_b64);
+        assert!(!verified, "Tampered message verified — security failure");
+    }
+
+    #[test]
+    fn test_blob_generation_format() {
+        let report = b"{\"status\":\"genuine\"}".to_vec();
+        let server_pk_b64 = generate_pq_keypair().0;  // Use generated KEM PK as "server"
+
+        let blob_b64 = pq_secure_attestation_blob(report.clone(), server_pk_b64.clone(), None);
+
+        let blob_bytes = BASE64.decode(blob_b64).unwrap();
+        assert!(blob_bytes.len() > MlKem768Ciphertext::BYTE_LEN + 12 + 16, "Blob too short");
 
         // Basic structure check
         assert_eq!(blob_bytes.len() % 4 == 0, false);  // Base64 decoded
