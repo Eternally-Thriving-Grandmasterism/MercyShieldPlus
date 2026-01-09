@@ -8,7 +8,7 @@ import com.mercyshieldplus.util.SecurePassphraseManager
 import net.sqlcipher.database.SQLiteDatabase
 import net.sqlcipher.database.SupportFactory
 
-@Database(entities = [IntegrityReportEntity::class], version = 1, exportSchema = true)
+@Database(entities = [IntegrityReportEntity::class, LogEntryEntity::class], version = 2, exportSchema = true)
 abstract class AppDatabase : RoomDatabase() {
     abstract fun integrityDao(): IntegrityDao
 
@@ -18,9 +18,7 @@ abstract class AppDatabase : RoomDatabase() {
 
         fun getDatabase(context: Context): AppDatabase {
             return INSTANCE ?: synchronized(this) {
-                // Derive passphrase from Keystore-backed secure storage
                 val passphrase = SecurePassphraseManager.getPassphrase(context.applicationContext)
-
                 val factory = SupportFactory(SQLiteDatabase.getBytes(passphrase))
 
                 val instance = Room.databaseBuilder(
@@ -29,11 +27,10 @@ abstract class AppDatabase : RoomDatabase() {
                     "mercyshieldplus_database_encrypted"
                 )
                     .openHelperFactory(factory)
-                    .fallbackToDestructiveMigration()  // Dev mercy; production migrations
+                    .fallbackToDestructiveMigration()  // Dev mercy — version 2 adds log table
                     .build()
 
-                // Zeroize passphrase char[] after DB open (best effort)
-                passphrase.fill('\u0000')
+                passphrase.fill('\u0000')  // Zeroize
 
                 INSTANCE = instance
                 instance
