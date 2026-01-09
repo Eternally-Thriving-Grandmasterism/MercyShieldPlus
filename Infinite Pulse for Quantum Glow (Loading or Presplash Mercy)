@@ -1,0 +1,31 @@
+@Composable
+fun QuantumGlowPulse() {
+    val infiniteTransition = rememberInfiniteTransition()
+    val scale by infiniteTransition.animateFloat(
+        initialValue = 1f,
+        targetValue = 1.2f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+    val alpha by infiniteTransition.animateFloat(
+        initialValue = 0.5f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(1000),
+            repeatMode = RepeatMode.Reverse
+        )
+    )
+
+    Box(
+        modifier = Modifier
+            .size(200.dp)
+            .scale(scale)
+            .background(Color(0xFF00FFFF).copy(alpha = alpha), CircleShape)
+            .border(4.dp, Color.Cyan.copy(alpha = alpha), CircleShape),
+        contentAlignment = Alignment.Center
+    ) {
+        Text("⚡️", fontSize = 80.sp, color = Color.Black)
+    }
+}
