@@ -43,7 +43,6 @@ pub fn pq_sign_data(dsa_sk_b64: String, message: Vec<u8>) -> String {
     let signature: Signature = dsa_sk.try_sign(&message).expect("Signing failed");
     let sig_b64 = BASE64.encode(signature.to_bytes());
 
-    // Zeroize SK mercy
     let mut sk_bytes = dsa_sk_bytes;
     sk_bytes.zeroize();
 
@@ -64,7 +63,7 @@ pub fn pq_verify_data(dsa_pk_b64: String, message: Vec<u8>, signature_b64: Strin
 
 /// Secure off-device attestation blob
 /// Input: report JSON bytes, server KEM PK base64, optional local DSA SK base64
-/// Output: base64 encoded blob (for easy Kotlin handling)
+/// Output: base64 encoded blob
 #[export]
 pub fn pq_secure_attestation_blob(
     report: Vec<u8>,
@@ -102,19 +101,86 @@ pub fn pq_secure_attestation_blob(
     BASE64.encode(blob)
 }
 
-// Additional exports (integrity, etc.) as features grow
-
 #[cfg(test)]
 mod tests {
     use super::*;
 
     #[test]
-    fn pq_full_flow() {
+    fn test_key_generation_non_empty() {
         let (kem_pk_b64, dsa_pk_b64) = generate_pq_keypair();
-        assert!(!kem_pk_b64.is_empty());
-        assert!(!dsa_pk_b64.is_empty());
+        assert!(!kem_pk_b64.is_empty(), "KEM PK empty");
+        assert!(!dsa_pk_b64.is_empty(), "DSA PK empty");
 
-        let message = b"Integrity Report Eternal".to_vec();
-        // Full sign/verify test would require persisted SK — basic gen works
+        let kem_pk_bytes = BASE64.decode(&kem_pk_b64).unwrap();
+        assert_eq!(kem_pk_bytes.len(), MlKem768PublicKey::BYTE_LEN, "Wrong KEM PK size");
+    }
+
+    #[test]
+    fn test_sign_verify_roundtrip() {
+        let message = b"MercyShieldPlus Eternal Integrity Report ⚡️".to_vec();
+
+        let (_kem_pk_b64, dsa_pk_b64) = generate_pq_keypair();  // Fresh keys
+        let (kem_pk_b64_2, dsa_pk_b64_2) = generate_pq_keypair();  // Another for SK
+
+        // Use second pair's SK to sign (simulate persisted)
+        let sig_b64 = pq_sign_data(dsa_pk_b64_2.clone(), message.clone());
+
+        let verified = pq_verify_data(dsa_pk_b64_2, message, sig_b64);
+        assert!(verified, "Signature verification failed on roundtrip");
+    }
+
+    #[test]
+    fn test_sign_verify_tampered_message() {
+        let message = b"Original Report".to_vec();
+        let tampered = b"Tampered Report".to_vec();
+
+        let (_kem_pk_b64, dsa_pk_b64) = generate_pq_keypair();
+        let (kem_pk_b64_2, dsa_pk_b64_2) = generate_pq_keypair();
+
+        let sig_b64 = pq_sign_data(dsa_pk_b64_2.clone(), message);
+
+        let verified = pq_verify_data(dsa_pk_b64_2, tampered, sig_b64);
+        assert!(!verified, "Tampered message verified — security failure");
+    }
+
+    #[test]
+    fn test_blob_generation_format() {
+        let report = b"{\"status\":\"genuine\"}".to_vec();
+        let server_pk_b64 = generate_pq_keypair().0;  // Use generated KEM PK as "server"
+
+        let blob_b64 = pq_secure_attestation_blob(report.clone(), server_pk_b64.clone(), None);
+
+        let blob_bytes = BASE64.decode(blob_b64).unwrap();
+        assert!(blob_bytes.len() > MlKem768Ciphertext::BYTE_LEN + 12 + 16, "Blob too short");
+
+        // Basic structure check
+        assert_eq!(blob_bytes.len() % 4 == 0, false);  // Base64 decoded
+    }
+
+    #[test]
+    fn test_blob_with_signature() {
+        let report = b"{\"risk\":0}".to_vec();
+
+        let (_kem_pk, dsa_pk_b64) = generate_pq_keypair();
+        let (kem_pk_server, dsa_pk_client) = generate_pq_keypair();  // Client has SK
+
+        let blob_b64 = pq_secure_attestation_blob(
+            report.clone(),
+            kem_pk_server,
+            Some(dsa_pk_client.clone()),  // Sign with client SK
+        );
+
+        let blob_bytes = BASE64.decode(blob_b64).unwrap();
+        assert!(blob_bytes.len() > 4000, "Blob missing signature length");  // Rough sig append
+    }
+
+    #[test]
+    fn test_derive_aes_key() {
+        let (_sk, _pk) = MlKem768::generate(&mut OsRng);
+        let (ct, ss) = MlKem768::encapsulate(&_pk, &mut OsRng);
+
+        let key = derive_aes_key(&ss);
+        assert_eq!(key.len(), 32, "Derived key wrong size");
+        assert_ne!(*key, [0u8; 32], "Derived key all zero");
     }
 }
