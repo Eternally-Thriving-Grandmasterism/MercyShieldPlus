@@ -1,0 +1,31 @@
+#[derive(Component)]
+struct AnomalyState {
+    active: bool,
+    timer: Timer,
+}
+
+fn trigger_anomaly(mut query: Query<&mut AnomalyState>) {
+    for mut state in &mut query {
+        state.active = true;
+        state.timer.reset();
+    }
+}
+
+fn anomaly_burst(
+    time: Res<Time>,
+    mut query: Query<(&mut Transform, &mut Sprite, &mut AnomalyState)>,
+) {
+    for (mut transform, mut sprite, mut state) in &mut query {
+        if state.active {
+            state.timer.tick(time.delta());
+            let progress = state.timer.percent();
+            transform.scale = Vec3::splat(1.0 + progress * 2.0); // Explode
+            sprite.color = Color::rgba(1.0, 0.0, 0.0, 1.0 - progress); // Red fade
+            if state.timer.finished() {
+                state.active = false;
+                transform.scale = Vec3::ONE;
+                sprite.color = Color::WHITE;
+            }
+        }
+    }
+}
