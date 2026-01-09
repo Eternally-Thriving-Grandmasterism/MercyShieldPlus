@@ -1,0 +1,15 @@
+# Rust shadows
+/target
+Cargo.lock
+
+# OS junk
+.DS_Store
+Thumbs.db
+
+# IDE
+.idea
+.vscode
+
+# Temp
+*.tmp
+*.bak
