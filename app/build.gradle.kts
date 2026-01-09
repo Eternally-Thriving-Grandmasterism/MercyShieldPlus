@@ -56,8 +56,11 @@ dependencies {
     // SQLCipher for encrypted Room DB mercy
     implementation("net.zetetic:android-database-sqlcipher:4.5.4")
 
-    // Security Crypto for EncryptedSharedPreferences (Keystore-backed storage of passphrase)
+    // Security Crypto for EncryptedSharedPreferences
     implementation("androidx.security:security-crypto-ktx:1.1.0")
+
+    // androidx.biometric for custom BiometricPrompt UI mercy
+    implementation("androidx.biometric:biometric:1.2.0")
 
     // Gson for details serialization mercy
     implementation("com.google.code.gson:gson:2.10.1")
