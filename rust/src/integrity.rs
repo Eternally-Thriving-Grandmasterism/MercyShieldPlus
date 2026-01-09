@@ -1,40 +1,39 @@
-// integrity.rs — Device Integrity Fortress Eternal (Custom + Play Integrity Logic)
+// rust/src/integrity.rs — Device Integrity Fortress Eternal (Custom + Play Integrity Token)
 use alloc::vec::Vec;
 use alloc::string::String;
 use uniffi::export;
 
 #[derive(Debug)]
 pub enum IntegrityVerdict {
-    Genuine,      // Hardware-backed mercy
-    Suspicious,   // Soft detect
-    Compromised,  // Hard root/tampering
+    Genuine,
+    Suspicious,
+    Compromised,
 }
 
 #[derive(Debug)]
 pub struct IntegrityReport {
     pub verdict: IntegrityVerdict,
-    pub details: Vec<String>,  // Human-readable mercy messages
-    pub risk_score: u8,       // 0-100 (0 = eternal safe)
+    pub details: Vec<String>,
+    pub risk_score: u8,  // 0-100
+    pub play_token: String,  // Raw token for server verify
 }
 
-/// Custom root/emulator/tampering checks (pure logic — Kotlin passes evidences)
+/// Evaluate integrity — Kotlin passes evidences + raw Play token
 #[export]
 pub fn evaluate_integrity(
-    suspicious_files: Vec<String>,     // e.g., ["/system/bin/su", "/magisk"]
-    suspicious_props: Vec<String>,     // e.g., ["ro.debuggable=1", "ro.secure=0"]
-    magisk_indicators: bool,          // Magisk app/package detect
-    play_integrity_verdict: Option<String>,  // "DEVICE_INTEGRITY" / "BASIC_INTEGRITY" etc. from Kotlin
+    suspicious_files: Vec<String>,
+    suspicious_props: Vec<String>,
+    magisk_indicators: bool,
+    play_token: String,  // Raw token string (or "null_token" on fail)
 ) -> IntegrityReport {
     let mut details = Vec::new();
     let mut score: u8 = 0;
 
-    // File checks
     if !suspicious_files.is_empty() {
         score += 40;
-        details.push(format!("Suspicious files detected: {:?}", suspicious_files));
+        details.push(format!("Suspicious files: {:?}", suspicious_files));
     }
 
-    // Props checks
     if !suspicious_props.is_empty() {
         score += 30;
         details.push(format!("Tamper props: {:?}", suspicious_props));
@@ -42,23 +41,16 @@ pub fn evaluate_integrity(
 
     if magisk_indicators {
         score += 20;
-        details.push("Magisk/Zygisk indicators found".to_string());
+        details.push("Magisk/Zygisk indicators".to_string());
     }
 
-    // Play Integrity (Kotlin passes verdict string)
-    if let Some(pi) = play_integrity_verdict {
-        if pi.contains("MEETS_DEVICE_INTEGRITY") {
-            // Genuine mercy
-        } else if pi.contains("MEETS_BASIC_INTEGRITY") {
-            score += 15;
-            details.push("Basic integrity only — possible emulator/soft root".to_string());
-        } else {
-            score += 35;
-            details.push("Play Integrity failed — compromised".to_string());
-        }
+    // Play token presence (basic client check; server full verify)
+    if play_token.is_empty() || play_token == "null_token" {
+        score += 35;
+        details.push("Play Integrity token unavailable/failed".to_string());
     } else {
-        score += 10;
-        details.push("Play Integrity unavailable".to_string());
+        details.push("Play Integrity token acquired — server verify pending".to_string());
+        // Client-side basic: no decode needed (server does full)
     }
 
     score = score.min(100);
@@ -74,19 +66,19 @@ pub fn evaluate_integrity(
         verdict,
         details,
         risk_score: score,
+        play_token,
     }
 }
 
-// Export report as JSON string for attestation signing
+/// Report to JSON (includes play_token for signing/blob)
 #[export]
-pub fn report_to_json(report: IntegrityReport) -> String {
-    // Simple serde-like manual (no deps) or add serde feature later
+pub fn report_to_json(report: &IntegrityReport) -> String {
+    // Manual JSON mercy (expand with serde later if needed)
     format!(
-        r#"{{"verdict":"{:?}","risk_score":{},"details":{}}}"#,
+        r#"{{"verdict":"{:?}","risk_score":{},"details":{},"play_token":"{}"}}"#,
         report.verdict,
         report.risk_score,
-        serde_json::to_string(&report.details).unwrap_or("[]".to_string())
+        serde_json::to_string(&report.details).unwrap_or("[]".to_string()),
+        report.play_token
     )
 }
-
-// Add more: self-tampering check (signature verify stub)
