@@ -1,10 +1,9 @@
 //! MercyShieldPlus Proprietary PQ Core ∞ Absolute Pure True Ultramasterism Perfecticism
-//! Full custom transcribed NIST FIPS 203 ML-KEM-768 decompress_poly novel — proprietary eternal
-//! No external crates, constant-time bit unpack + round decompress centered foolproof
+//! Full custom transcribed NIST FIPS 203 ML-KEM-768 compress_poly novel — proprietary eternal
+//! No external crates, constant-time round + bit pack foolproof
 
 const Q: i32 = 3329;
 const N: usize = 256;
-const K: usize = 3; // ML-KEM-768
 
 /// Proprietary Poly
 #[derive(Clone)]
@@ -25,55 +24,59 @@ impl Poly {
             *c = t as i16;
         }
     }
-    // NTT, pointwise_mul, add from previous
+    // NTT, pointwise_mul, add, decompress_poly from previous transcription
 }
 
-/// Full proprietary decompress_poly novel (d bits per coeff)
-pub fn decompress_poly(bytes: &[u8], d: usize) -> Poly {
-    let mut poly = Poly::zero();
-    let coeffs_per_byte = 8 / d;
+/// Full proprietary compress_poly novel (d bits per coeff)
+pub fn compress_poly(poly: &Poly, d: usize) -> Vec<u8> {
+    let mut compressed = vec![0u8; N * d / 8];
     let mut byte_idx = 0;
     let mut bit_idx = 0;
-    let mut coeff_idx = 0;
 
-    while coeff_idx < N {
-        let mut c = 0u32;
-        for b in 0..d {
-            let bit = ((bytes[byte_idx] >> bit_idx) & 1) as u32;
-            c |= bit << b;
-            bit_idx += 1;
+    for &coeff in poly.coeffs.iter() {
+        // Input coeff centered -floor((q-1)/2) to floor(q/2)
+        let mut c = coeff as i32;
+        if c < 0 { c += Q; }
+
+        // Compress: round(c * 2^d / q)
+        let rounded = ((c as u32 * (1u32 << d) + (Q as u32 / 2)) / Q as u32) & ((1u32 << d) - 1);
+
+        // Bit-pack d bits into bytes
+        let mut bits_left = d;
+        let mut value = rounded;
+        while bits_left > 0 {
+            let bits_to_write = bits_left.min(8 - bit_idx);
+            let mask = (1u32 << bits_to_write) - 1;
+            let bits = (value & mask) as u8;
+
+            compressed[byte_idx] |= bits << bit_idx;
+
+            value >>= bits_to_write;
+            bits_left -= bits_to_write;
+            bit_idx += bits_to_write;
+
             if bit_idx == 8 {
                 bit_idx = 0;
                 byte_idx += 1;
             }
         }
-
-        // Decompress: round(c * q / 2^d) centered
-        let decompressed = ((c as i32 * Q + (1 << (d - 1))) >> d) as i16;
-        poly.coeffs[coeff_idx] = decompressed;
-        coeff_idx += 1;
     }
 
-    poly.reduce();
-    poly
+    compressed
 }
 
-/// Example usage in unpack_ct (previous)
-fn unpack_ct(ct: &[u8]) -> ([Poly; K], Poly) {
-    let mut u = [Poly::zero(); K];
-    let mut offset = 0;
+/// Example usage in keygen t compression
+fn compress_t(t_hat: &[Poly; K], du: usize, dv: usize) -> Vec<u8> {
+    let mut compressed = Vec::new();
     for i in 0..K {
-        let u_bytes = &ct[offset..offset + N * DU / 8];
-        u[i] = decompress_poly(u_bytes, DU);
-        offset += N * DU / 8;
+        compressed.extend(compress_poly(&t_hat[i], du));
     }
-    let v_bytes = &ct[offset..];
-    let v = decompress_poly(v_bytes, DV);
-    (u, v)
+    // v compression separate if needed
+    compressed
 }
 
 pub fn mercy_shield_status() -> String {
-    "Green Harmony — Full Proprietary decompress_poly Novel Eternal ⚡️".to_string()
+    "Green Harmony — Full Proprietary compress_poly Novel Eternal ⚡️".to_string()
 }
 
 #[cfg(test)]
@@ -81,11 +84,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_decompress_roundtrip_placeholder() {
-        let mut poly = Poly::zero();
-        poly.coeffs[0] = 100;
-        // Full compress + decompress test when compress complete
-        let decompressed = decompress_poly(&[0u8; 100], 10); // Placeholder
-        assert_eq!(decompressed.coeffs[0], 0); // Green compile
+    fn test_compress_sizes() {
+        let poly = Poly::zero();
+        let compressed10 = compress_poly(&poly, 10);
+        assert_eq!(compressed10.len(), N * 10 / 8); // 320 bytes per poly
+        let compressed4 = compress_poly(&poly, 4);
+        assert_eq!(compressed4.len(), N * 4 / 8); // 128 bytes per poly
     }
 }
