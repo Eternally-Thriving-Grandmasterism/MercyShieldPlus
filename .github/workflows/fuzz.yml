@@ -1,0 +1,39 @@
+name: Rust Fuzz Testing Eternal ⚡️
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    - cron: '0 3 * * *'  # Daily at 3 AM UTC mercy for longer runs
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [pq_sign_fuzz, pq_verify_fuzz, pq_blob_fuzz, ml_kem_encaps_fuzz]  # All current targets mercy
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Nightly Rust toolchain
+        uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+
+      - name: Install cargo-fuzz
+        run: cargo install cargo-fuzz
+
+      - name: Run fuzz target (limited time mercy)
+        run: |
+          cargo fuzz run ${{ matrix.target }} -- -max_total_time=600 -runs=100000
+
+      - name: Upload crash artifacts (if any)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fuzz-crashes-${{ matrix.target }}-${{ github.run_id }}
+          path: fuzz/artifacts/${{ matrix.target }}/*
+          retention-days: 30
