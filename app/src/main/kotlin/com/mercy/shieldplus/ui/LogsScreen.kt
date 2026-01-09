@@ -30,27 +30,43 @@ fun LogsScreen(viewModel: ShieldViewModel) {
             TopAppBar(
                 title = { Text("App Logs Eternal ⚡️") },
                 actions = {
-                    var expanded by remember { mutableStateOf(false) }
-                    IconButton(onClick = { expanded = true }) {
+                    var filterExpanded by remember { mutableStateOf(false) }
+                    IconButton(onClick = { filterExpanded = true }) {
                         Icon(Icons.Default.FilterList, contentDescription = "Filter")
                     }
-                    DropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+                    DropdownMenu(expanded = filterExpanded, onDismissRequest = { filterExpanded = false }) {
                         filterOptions.forEach { option ->
                             DropdownMenuItem(
                                 text = { Text(option) },
                                 onClick = {
                                     viewModel.setLogFilter(option)
-                                    expanded = false
+                                    filterExpanded = false
                                 }
                             )
                         }
                     }
 
-                    IconButton(onClick = {
-                        val uri = LogExportUtil.exportLogs(context, logs)
-                        LogExportUtil.shareLogsUri(context, uri)
-                    }) {
-                        Icon(Icons.Default.Share, contentDescription = "Export Logs")
+                    var exportExpanded by remember { mutableStateOf(false) }
+                    IconButton(onClick = { exportExpanded = true }) {
+                        Icon(Icons.Default.Share, contentDescription = "Export")
+                    }
+                    DropdownMenu(expanded = exportExpanded, onDismissRequest = { exportExpanded = false }) {
+                        DropdownMenuItem(
+                            text = { Text("Export Plain JSON") },
+                            onClick = {
+                                val uri = LogExportUtil.exportPlainLogs(context, logs)
+                                LogExportUtil.shareLogsUri(context, uri, false)
+                                exportExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Export Encrypted") },
+                            onClick = {
+                                val uri = LogExportUtil.exportEncryptedLogs(context, logs)
+                                LogExportUtil.shareLogsUri(context, uri, true)
+                                exportExpanded = false
+                            }
+                        )
                     }
 
                     TextButton(onClick = { viewModel.clearLogs() }) {
