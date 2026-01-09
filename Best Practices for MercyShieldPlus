@@ -1,0 +1,5 @@
+ViewModel + StateFlow for integrity checks (coroutines background).
+Hilt/Dagger for dependency injection (Rust bridge).
+Preview composables for design.
+Accessibility + Dark theme support eternal.
+These patterns make UI declarative, testable, performant — perfect for genuine shield status + buddy harmony.
