@@ -26,4 +26,40 @@ struct Args {
 }
 
 fn main() -> io::Result<()> {
-    let
+    let args = Args::parse();
+
+    // Validate passphrase hex
+    if args.passphrase_hex.len() != 64 {
+        eprintln!("Error: Passphrase must be 64 hex chars (32 bytes)");
+        std::process::exit(1);
+    }
+    let passphrase_bytes = hex::decode(&args.passphrase_hex).expect("Invalid hex passphrase");
+
+    // Read encrypted file
+    let encrypted_base64 = fs::read_to_string(&args.input)?;
+    let encrypted_data = BASE64.decode(encrypted_base64.trim()).expect("Invalid base64 in file");
+
+    if encrypted_data.len() < 12 + 16 {
+        eprintln!("Error: Encrypted data too short");
+        std::process::exit(1);
+    }
+
+    // Split nonce (first 12 bytes)
+    let (nonce_bytes, ciphertext_tag) = encrypted_data.split_at(12);
+    let nonce = Nonce::from_slice(nonce_bytes);
+
+    // Decrypt
+    let key = aes_gcm::Key::<Aes256Gcm>::from_slice(&passphrase_bytes);
+    let cipher = Aes256Gcm::new(key);
+
+    let mut plaintext = ciphertext_tag.to_vec();
+    cipher.decrypt_in_place(nonce, b"", &mut plaintext).expect("Decryption failed — wrong passphrase or corrupted file");
+
+    // Pretty JSON output mercy
+    let pretty_json = serde_json::to_string_pretty(&serde_json::from_slice::<serde_json::Value>(&plaintext).unwrap_or(serde_json::json!({"error": "Invalid JSON"}))).unwrap();
+
+    fs::write(&args.output, pretty_json)?;
+    println!("Decrypted logs written to: {:?}", args.output);
+
+    Ok(())
+}
